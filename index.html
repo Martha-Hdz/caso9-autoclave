@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CASO 9 – Corrientes de Fuga en Autoclaves</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Lora:ital,wght@0,400;0,600;1,400&family=Inconsolata:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* ── TOKENS ── */
+:root {
+  --navy:   #0A0E1A;
+  --card:   #0D1322;
+  --blue:   #1E3A8A;
+  --acc:    #3B82F6;
+  --amber:  #F59E0B;
+  --white:  #E8EDF8;
+  --muted:  #7A8FAA;
+  --light:  #CADCFC;
+  --glow:   rgba(59,130,246,0.18);
+  --glow2:  rgba(245,158,11,0.15);
+}
+
+/* ── RESET ── */
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--navy);
+  color: var(--white);
+  font-family: 'Lora', Georgia, serif;
+  overflow-x: hidden;
+  cursor: none;
+}
+
+/* ── CUSTOM CURSOR ── */
+.cursor {
+  position: fixed;
+  width: 12px; height: 12px;
+  background: var(--acc);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  transition: transform 0.08s, width 0.2s, height 0.2s, opacity 0.2s;
+  mix-blend-mode: screen;
+}
+.cursor-ring {
+  position: fixed;
+  width: 36px; height: 36px;
+  border: 1.5px solid var(--acc);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9998;
+  transform: translate(-50%, -50%);
+  transition: transform 0.18s, width 0.2s, height 0.2s, opacity 0.2s, border-color 0.3s;
+  opacity: 0.5;
+}
+
+/* ── GRID BG ── */
+.bg-grid {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(59,130,246,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59,130,246,0.035) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+.bg-glow {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(ellipse 70% 50% at 20% 20%, rgba(30,58,138,0.18), transparent),
+              radial-gradient(ellipse 50% 40% at 85% 75%, rgba(59,130,246,0.10), transparent);
+}
+
+/* ── NOISE GRAIN ── */
+.grain {
+  position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ── LAYOUT ── */
+main { position: relative; z-index: 2; }
+
+/* ══ HERO ══ */
+.hero {
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center;
+  padding: 60px 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-bg-circle {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.hbc1 {
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(30,58,138,0.35), transparent 70%);
+  top: -120px; left: -120px;
+  animation: floatA 12s ease-in-out infinite;
+}
+.hbc2 {
+  width: 380px; height: 380px;
+  background: radial-gradient(circle, rgba(59,130,246,0.15), transparent 70%);
+  bottom: -80px; right: -60px;
+  animation: floatB 10s ease-in-out infinite;
+}
+.hbc3 {
+  width: 220px; height: 220px;
+  background: radial-gradient(circle, rgba(245,158,11,0.1), transparent 70%);
+  top: 35%; right: 10%;
+  animation: floatA 14s ease-in-out infinite reverse;
+}
+
+@keyframes floatA {
+  0%,100% { transform: translate(0,0) scale(1); }
+  50%      { transform: translate(30px, -20px) scale(1.05); }
+}
+@keyframes floatB {
+  0%,100% { transform: translate(0,0) scale(1); }
+  50%      { transform: translate(-20px, 30px) scale(1.08); }
+}
+
+.hero-eyebrow {
+  font-family: 'Inconsolata', monospace;
+  font-size: 11px; letter-spacing: 7px;
+  color: var(--acc); text-transform: uppercase;
+  margin-bottom: 20px;
+  opacity: 0; animation: slideUp 0.7s 0.2s forwards;
+}
+
+.hero-title {
+  font-family: 'Bebas Neue', cursive;
+  font-size: clamp(5rem, 14vw, 11rem);
+  letter-spacing: 6px;
+  line-height: 0.9;
+  background: linear-gradient(160deg, var(--white) 30%, var(--acc) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  opacity: 0; animation: slideUp 0.8s 0.4s forwards;
+}
+
+.hero-sub {
+  font-size: clamp(1rem, 2.2vw, 1.3rem);
+  color: var(--light);
+  font-style: italic;
+  margin-top: 20px; max-width: 560px;
+  opacity: 0; animation: slideUp 0.7s 0.65s forwards;
+  line-height: 1.6;
+}
+
+.hero-divider {
+  width: 40px; height: 2px;
+  background: linear-gradient(90deg, var(--acc), var(--amber));
+  margin: 28px auto;
+  opacity: 0; animation: slideUp 0.5s 0.85s forwards;
+}
+
+.hero-authors {
+  font-family: 'Inconsolata', monospace;
+  font-size: 11px; letter-spacing: 3px;
+  color: var(--amber);
+  opacity: 0; animation: slideUp 0.6s 1.0s forwards;
+  line-height: 2;
+}
+
+.scroll-hint {
+  position: absolute; bottom: 32px; left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Inconsolata', monospace;
+  font-size: 9px; letter-spacing: 4px; color: var(--muted);
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  opacity: 0; animation: fadeIn 1s 1.6s forwards;
+}
+.scroll-arrow {
+  width: 18px; height: 18px;
+  border-right: 1.5px solid var(--muted);
+  border-bottom: 1.5px solid var(--muted);
+  transform: rotate(45deg);
+  animation: bounce 1.6s ease-in-out infinite;
+}
+@keyframes bounce { 0%,100% { transform: rotate(45deg) translateY(0); } 50% { transform: rotate(45deg) translateY(6px); } }
+
+/* ══ SECTION HEADER ══ */
+.section-label {
+  text-align: center;
+  padding: 80px 24px 40px;
+}
+.section-label-text {
+  font-family: 'Inconsolata', monospace;
+  font-size: 10px; letter-spacing: 8px; color: var(--acc); text-transform: uppercase;
+  display: block; margin-bottom: 10px;
+}
+.section-label h2 {
+  font-family: 'Bebas Neue', cursive;
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  letter-spacing: 4px;
+  background: linear-gradient(135deg, var(--white), var(--light));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+
+/* ══ CARDS GRID ══ */
+.cards-section {
+  padding: 0 28px 80px;
+  max-width: 1320px;
+  margin: 0 auto;
+}
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 24px;
+}
+
+/* ══ CARD 3D ══ */
+.card-outer {
+  perspective: 1000px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid rgba(59,130,246,0.12);
+  border-radius: 20px;
+  padding: 0;
+  position: relative;
+  overflow: hidden;
+  transform-style: preserve-3d;
+  transition: box-shadow 0.4s;
+  min-height: 340px;
+  display: flex; flex-direction: column;
+  /* scroll reveal */
+  opacity: 0;
+  transform: translateY(50px) rotateX(6deg);
+  transition: opacity 0.6s, transform 0.6s, box-shadow 0.4s;
+}
+.card.visible {
+  opacity: 1;
+  transform: translateY(0) rotateX(0);
+}
+.card:hover {
+  box-shadow:
+    0 0 0 1px rgba(59,130,246,0.3),
+    0 24px 60px rgba(0,0,0,0.6),
+    0 0 50px var(--glow);
+}
+
+/* top gradient line */
+.card-top-bar {
+  height: 3px;
+  background: linear-gradient(90deg, var(--acc), var(--amber));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.45s cubic-bezier(0.4,0,0.2,1);
+}
+.card:hover .card-top-bar { transform: scaleX(1); }
+
+.card-inner {
+  padding: 28px 28px 24px;
+  flex: 1; display: flex; flex-direction: column; gap: 16px;
+  position: relative;
+}
+
+/* ghost letter */
+.card-ghost {
+  font-family: 'Bebas Neue', cursive;
+  font-size: 9rem;
+  color: rgba(30,58,138,0.18);
+  position: absolute;
+  bottom: -10px; right: 14px;
+  line-height: 1;
+  pointer-events: none;
+  letter-spacing: 2px;
+  user-select: none;
+}
+
+/* shine */
+.card-shine {
+  position: absolute; inset: 0; border-radius: 20px;
+  background: radial-gradient(circle at 25% 25%, rgba(255,255,255,0.05), transparent 50%);
+  pointer-events: none;
+  opacity: 0; transition: opacity 0.3s;
+}
+.card:hover .card-shine { opacity: 1; }
+
+/* header row */
+.card-header {
+  display: flex; align-items: center; gap: 14px;
+}
+
+.badge {
+  width: 48px; height: 48px;
+  background: linear-gradient(135deg, var(--blue), #0e214f);
+  border: 1px solid rgba(59,130,246,0.35);
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Bebas Neue', cursive;
+  font-size: 1.5rem; color: var(--white);
+  flex-shrink: 0;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+}
+
+.card-meta {
+  display: flex; flex-direction: column; gap: 3px;
+}
+.card-tag {
+  font-family: 'Inconsolata', monospace;
+  font-size: 9px; letter-spacing: 4px; color: var(--acc); text-transform: uppercase;
+}
+
+.card h3 {
+  font-family: 'Lora', serif;
+  font-size: 1.1rem; font-weight: 600;
+  line-height: 1.35; color: var(--white);
+}
+
+/* rule */
+.card-rule {
+  height: 1px;
+  background: linear-gradient(90deg, rgba(59,130,246,0.25), transparent);
+}
+
+/* points */
+.points { display: flex; flex-direction: column; gap: 10px; flex: 1; }
+
+.point {
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: 0.86rem; line-height: 1.55; color: var(--muted);
+}
+
+.point-pip {
+  width: 5px; height: 5px;
+  background: var(--acc);
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 7px;
+  transition: background 0.3s;
+}
+.card:hover .point-pip { background: var(--amber); }
+
+/* highlight box */
+.highlight {
+  background: rgba(30,58,138,0.28);
+  border: 1px solid rgba(59,130,246,0.18);
+  border-left: 3px solid var(--acc);
+  border-radius: 10px;
+  padding: 13px 15px;
+  font-family: 'Inconsolata', monospace;
+  font-size: 0.8rem; line-height: 1.7; color: var(--light);
+}
+
+.norm-tag {
+  display: inline-block;
+  border: 1px solid rgba(245,158,11,0.3);
+  background: rgba(245,158,11,0.07);
+  color: var(--amber);
+  font-family: 'Inconsolata', monospace;
+  font-size: 0.7rem; letter-spacing: 1px;
+  padding: 4px 12px; border-radius: 100px;
+  margin-top: 4px;
+  align-self: flex-start;
+}
+
+/* ══ CONCLUSION ══ */
+.conclusion-section {
+  max-width: 1320px;
+  margin: 0 auto 100px;
+  padding: 0 28px;
+}
+
+.conclusion {
+  background: linear-gradient(135deg, var(--blue) 0%, #0d1a3a 60%, var(--card) 100%);
+  border: 1px solid rgba(59,130,246,0.2);
+  border-radius: 24px;
+  padding: 56px 60px;
+  position: relative;
+  overflow: hidden;
+}
+
+.conclusion::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 60% 80% at 90% 50%, rgba(59,130,246,0.12), transparent);
+  pointer-events: none;
+}
+
+.conclusion-eyebrow {
+  font-family: 'Inconsolata', monospace;
+  font-size: 9px; letter-spacing: 7px; color: var(--amber); text-transform: uppercase;
+  display: block; margin-bottom: 14px;
+}
+
+.conclusion h2 {
+  font-family: 'Bebas Neue', cursive;
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  letter-spacing: 4px; color: var(--white);
+  margin-bottom: 28px;
+  line-height: 1;
+}
+
+.conclusion-rule {
+  width: 60px; height: 2px;
+  background: linear-gradient(90deg, var(--amber), transparent);
+  margin-bottom: 28px;
+}
+
+.conclusion p {
+  color: var(--muted); font-size: 1rem;
+  line-height: 1.85; max-width: 700px;
+}
+.conclusion p + p { margin-top: 16px; }
+
+.conclusion-cite {
+  position: absolute;
+  bottom: 30px; right: 40px;
+  font-family: 'Inconsolata', monospace;
+  font-size: 9px; letter-spacing: 3px; color: rgba(122,143,170,0.4);
+}
+
+/* ══ ANIMATIONS ══ */
+@keyframes slideUp {
+  from { opacity:0; transform: translateY(30px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity:0; } to { opacity:1; }
+}
+
+/* staggered card reveal */
+.card-outer:nth-child(1) .card { transition-delay: 0.05s; }
+.card-outer:nth-child(2) .card { transition-delay: 0.12s; }
+.card-outer:nth-child(3) .card { transition-delay: 0.19s; }
+.card-outer:nth-child(4) .card { transition-delay: 0.26s; }
+.card-outer:nth-child(5) .card { transition-delay: 0.33s; }
+.card-outer:nth-child(6) .card { transition-delay: 0.40s; }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--navy); }
+::-webkit-scrollbar-thumb { background: var(--blue); border-radius: 4px; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 640px) {
+  .conclusion { padding: 36px 28px; }
+  .cards-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- CURSOR -->
+<div class="cursor" id="cur"></div>
+<div class="cursor-ring" id="ring"></div>
+
+<!-- BACKGROUND -->
+<div class="bg-grid"></div>
+<div class="bg-glow"></div>
+<div class="grain"></div>
+
+<main>
+
+  <!-- ══ HERO ══ -->
+  <section class="hero">
+    <div class="hero-bg-circle hbc1"></div>
+    <div class="hero-bg-circle hbc2"></div>
+    <div class="hero-bg-circle hbc3"></div>
+
+    <span class="hero-eyebrow">Instituto Tecnológico de Tijuana · Mediciones Eléctricas</span>
+    <h1 class="hero-title">CASO 9</h1>
+    <p class="hero-sub">Seguridad en la Medición de Corrientes de Fuga en Autoclaves</p>
+    <div class="hero-divider"></div>
+    <p class="hero-authors">
+      Hernandez Carmona Martha Julissa &nbsp;#25212091<br>
+      Rodríguez López Alison &nbsp;#25210551
+    </p>
+
+    <div class="scroll-hint">
+      <span>EXPLORAR</span>
+      <div class="scroll-arrow"></div>
+    </div>
+  </section>
+
+  <!-- ══ CARDS SECTION ══ -->
+  <div class="section-label">
+    <span class="section-label-text">Preguntas del caso</span>
+    <h2>Análisis de Seguridad Eléctrica</h2>
+  </div>
+
+  <section class="cards-section">
+    <div class="cards-grid">
+
+      <!-- A -->
+      <div class="card-outer">
+        <article class="card">
+          <div class="card-top-bar"></div>
+          <div class="card-shine"></div>
+          <div class="card-ghost">A</div>
+          <div class="card-inner">
+            <div class="card-header">
+              <div class="badge">A</div>
+              <div class="card-meta">
+                <span class="card-tag">Pregunta A</span>
+                <h3>¿Por qué el límite es tan estricto en la resistencia de tierra?</h3>
+              </div>
+            </div>
+            <div class="card-rule"></div>
+            <div class="points">
+              <div class="point"><div class="point-pip"></div><span>La puesta a tierra es la protección principal contra descargas eléctricas.</span></div>
+              <div class="point"><div class="point-pip"></div><span>Una resistencia baja desvía las corrientes de fuga de forma segura.</span></div>
+              <div class="point"><div class="point-pip"></div><span>Evita que la carcasa metálica del equipo quede energizada.</span></div>
+              <div class="point"><div class="point-pip"></div><span>Crítico en autoclaves: humedad, vapor, metales y contacto frecuente.</span></div>
+            </div>
+            <div class="highlight">Referencia hospitalaria: ≤ 0.1 Ω<br>Crítico por: humedad · vapor · superficies metálicas</div>
+            <span class="norm-tag">NOM-001-SEDE-2012 Art. 517</span>
+          </div>
+        </article>
+      </div>
+
+      <!-- B -->
+      <div class="card-outer">
+        <article class="card">
+          <div class="card-top-bar"></div>
+          <div class="card-shine"></div>
+          <div class="card-ghost">B</div>
+          <div class="card-inner">
+            <div class="card-header">
+              <div class="badge">B</div>
+              <div class="card-meta">
+                <span class="card-tag">Pregunta B</span>
+                <h3>¿Qué efectos fisiológicos causa una corriente de fuga de 500 µA?</h3>
+              </div>
+            </div>
+            <div class="card-rule"></div>
+            <div class="points">
+              <div class="point"><div class="point-pip"></div><span>500 µA (0.5 mA) está dentro del umbral de percepción humana.</span></div>
+              <div class="point"><div class="point-pip"></div><span>Provoca hormigueo, sensación de "toque" e incomodidad.</span></div>
+              <div class="point"><div class="point-pip"></div><span>La percepción aumenta significativamente si la piel está húmeda.</span></div>
+              <div class="point"><div class="point-pip"></div><span>Puede ser peligroso si la trayectoria pasa por el tórax.</span></div>
+            </div>
+            <div class="highlight">⚠ Riesgo elevado en condiciones de humedad.<br>Personas vulnerables: mayor sensibilidad al choque eléctrico.</div>
+            <span class="norm-tag">UMBRAL PERCEPCIÓN: 0.5 mA</span>
+          </div>
+        </article>
+      </div>
+
+      <!-- C -->
+      <div class="card-outer">
+        <article class="card">
+          <div class="card-top-bar"></div>
+          <div class="card-shine"></div>
+          <div class="card-ghost">C</div>
+          <div class="card-inner">
+            <div class="card-header">
+              <div class="badge">C</div>
+              <div class="card-meta">
+                <span class="card-tag">Pregunta C</span>
+                <h3>¿Cómo se relacionan la humedad y la resistencia de aislamiento?</h3>
+              </div>
+            </div>
+            <div class="card-rule"></div>
+            <div class="points">
+              <div class="point"><div class="point-pip"></div><span>La humedad disminuye la resistencia de aislamiento.</span></div>
+              <div class="point"><div class="point-pip"></div><span>Facilita el paso de corriente en materiales aislantes.</span></div>
+              <div class="point"><div class="point-pip"></div><span>El vapor y la temperatura pueden degradar los materiales aislantes.</span></div>
+              <div class="point"><div class="point-pip"></div><span>Crean caminos de fuga que energizan la carcasa metálica.</span></div>
+            </div>
+            <div class="highlight">Se requieren mediciones periódicas de aislamiento.<br>Inspección obligatoria post-ciclo de esterilización.</div>
+            <span class="norm-tag">RIESGO: DEGRADACIÓN TÉRMICA</span>
+          </div>
+        </article>
+      </div>
+
+      <!-- D -->
+      <div class="card-outer">
+        <article class="card">
+          <div class="card-top-bar"></div>
+          <div class="card-shine"></div>
+          <div class="card-ghost">D</div>
+          <div class="card-inner">
+            <div class="card-header">
+              <div class="badge">D</div>
+              <div class="card-meta">
+                <span class="card-tag">Pregunta D</span>
+                <h3>¿Qué responsabilidad tiene el ingeniero si ocurre un accidente?</h3>
+              </div>
+            </div>
+            <div class="card-rule"></div>
+            <div class="points">
+              <div class="point"><div class="point-pip"></div><span>El ingeniero biomédico tiene responsabilidad técnica, ética y legal.</span></div>
+              <div class="point"><div class="point-pip"></div><span>Operar equipo inseguro puede implicar negligencia y viola la normativa.</span></div>
+              <div class="point"><div class="point-pip"></div><span>Pone en riesgo la integridad de personal de salud y pacientes.</span></div>
+            </div>
+            <div class="highlight">Obligación: Retirar → Documentar → Corregir → Autorizar.<br>Seguridad antes que continuidad operativa.</div>
+            <span class="norm-tag">RESPONSABILIDAD PROFESIONAL</span>
+          </div>
+        </article>
+      </div>
+
+      <!-- E -->
+      <div class="card-outer">
+        <article class="card">
+          <div class="card-top-bar"></div>
+          <div class="card-shine"></div>
+          <div class="card-ghost">E</div>
+          <div class="card-inner">
+            <div class="card-header">
+              <div class="badge">E</div>
+              <div class="card-meta">
+                <span class="card-tag">Pregunta E</span>
+                <h3>¿Cómo se mide la resistencia de aislamiento con megóhmetro?</h3>
+              </div>
+            </div>
+            <div class="card-rule"></div>
+            <div class="points">
+              <div class="point"><div class="point-pip"></div><span>Desconectar el equipo de la red eléctrica.</span></div>
+              <div class="point"><div class="point-pip"></div><span>Aplicar voltaje de prueba de 500 – 1000 V DC.</span></div>
+              <div class="point"><div class="point-pip"></div><span>Medir la resistencia entre partes activas y tierra. Registrar en MΩ.</span></div>
+              <div class="point"><div class="point-pip"></div><span>Comparar con normativa o especificaciones del fabricante.</span></div>
+            </div>
+            <div class="highlight">Valor mínimo aceptable: ≥ 1 MΩ<br>Valores bajos → aislamiento deteriorado · mayor riesgo</div>
+            <span class="norm-tag">EQUIPO: MEGÓHMETRO 500-1000 V</span>
+          </div>
+        </article>
+      </div>
+
+      <!-- F -->
+      <div class="card-outer">
+        <article class="card">
+          <div class="card-top-bar"></div>
+          <div class="card-shine"></div>
+          <div class="card-ghost">F</div>
+          <div class="card-inner">
+            <div class="card-header">
+              <div class="badge">F</div>
+              <div class="card-meta">
+                <span class="card-tag">Pregunta F</span>
+                <h3>¿Qué criterios aplican las autoridades para clausurar el equipo?</h3>
+              </div>
+            </div>
+            <div class="card-rule"></div>
+            <div class="points">
+              <div class="point"><div class="point-pip"></div><span>Resistencia de tierra fuera del rango normativo.</span></div>
+              <div class="point"><div class="point-pip"></div><span>Corrientes de fuga que excedan los límites establecidos.</span></div>
+              <div class="point"><div class="point-pip"></div><span>Riesgo eléctrico comprobado mediante inspección.</span></div>
+              <div class="point"><div class="point-pip"></div><span>Reportes técnicos documentados y no atendidos.</span></div>
+            </div>
+            <div class="highlight">COFEPRIS / Ingeniería Hospitalaria:<br>Protección de la salud · Seguridad antes que operatividad.</div>
+            <span class="norm-tag">AUTORIDAD: COFEPRIS</span>
+          </div>
+        </article>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══ CONCLUSION ══ -->
+  <section class="conclusion-section">
+    <div class="conclusion">
+      <span class="conclusion-eyebrow">Conclusión del Caso</span>
+      <h2>SEGURIDAD PRIMERO</h2>
+      <div class="conclusion-rule"></div>
+      <p>La medición de corrientes de fuga y la verificación de la puesta a tierra son aspectos fundamentales en la seguridad eléctrica de autoclaves. Las condiciones de operación de estos equipos incrementan significativamente el riesgo eléctrico si no se cumplen los estándares establecidos.</p>
+      <p>La continuidad del servicio no debe comprometer la seguridad. El ingeniero biomédico es responsable de garantizar el cumplimiento normativo, retirar de operación cualquier equipo que represente un riesgo y proteger tanto al personal de salud como a los pacientes.</p>
+      <span class="conclusion-cite">MEDICIONES ELÉCTRICAS · ITT 2025</span>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  // ── CURSOR ──
+  const cur = document.getElementById('cur');
+  const ring = document.getElementById('ring');
+  let mx = 0, my = 0, rx = 0, ry = 0;
+
+  document.addEventListener('mousemove', e => {
+    mx = e.clientX; my = e.clientY;
+    cur.style.left = mx + 'px';
+    cur.style.top = my + 'px';
+  });
+
+  (function animRing() {
+    rx += (mx - rx) * 0.12;
+    ry += (my - ry) *.12;
+    ring.style.left = rx + 'px';
+    ring.style.top = ry + 'px';
+    requestAnimationFrame(animRing);
+  })();
+
+  document.querySelectorAll('.card').forEach(c => {
+    c.addEventListener('mouseenter', () => {
+      cur.style.width = '20px'; cur.style.height = '20px';
+      ring.style.width = '56px'; ring.style.height = '56px';
+      ring.style.borderColor = 'var(--amber)';
+    });
+    c.addEventListener('mouseleave', () => {
+      cur.style.width = '12px'; cur.style.height = '12px';
+      ring.style.width = '36px'; ring.style.height = '36px';
+      ring.style.borderColor = 'var(--acc)';
+    });
+  });
+
+  // ── 3D TILT ──
+  document.querySelectorAll('.card-outer').forEach(outer => {
+    const card = outer.querySelector('.card');
+    outer.addEventListener('mousemove', e => {
+      const r = card.getBoundingClientRect();
+      const dx = (e.clientX - r.left - r.width / 2) / (r.width / 2);
+      const dy = (e.clientY - r.top - r.height / 2) / (r.height / 2);
+      card.style.transform = `rotateX(${-dy * 10}deg) rotateY(${dx * 10}deg) translateZ(12px)`;
+      card.style.transition = 'transform 0.06s linear, box-shadow 0.4s';
+    });
+    outer.addEventListener('mouseleave', () => {
+      card.style.transition = 'transform 0.5s cubic-bezier(0.4,0,0.2,1), box-shadow 0.4s, opacity 0.6s';
+      card.style.transform = card.classList.contains('visible')
+        ? 'translateY(0) rotateX(0)'
+        : 'translateY(50px) rotateX(6deg)';
+    });
+  });
+
+  // ── SCROLL REVEAL ──
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.querySelector('.card').classList.add('visible');
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.12 });
+
+  document.querySelectorAll('.card-outer').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
